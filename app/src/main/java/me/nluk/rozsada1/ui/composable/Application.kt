@@ -1,0 +1,84 @@
+package me.nluk.rozsada1.ui.composable
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import me.nluk.rozsada1.ui.theme.AppTheme
+import me.nluk.rozsada1.ui.theme.primaryDarkColor
+
+@Composable
+fun RozsadaApp(){
+    val navController = rememberNavController()
+    AppTheme{
+        Scaffold(
+            bottomBar = { BottomNavigationBar(navController) },
+            content = { innerPadding: PaddingValues ->
+                NavHostContent(innerPadding, navController)
+            }
+        )
+    }
+}
+
+@Composable
+fun NavHostContent(innerPadding: PaddingValues, navController: NavHostController){
+    NavHost(
+        navController,
+        startDestination = ScreenNavigation.Barter.route,
+        Modifier.padding(innerPadding)
+    ) {
+        composable(ScreenNavigation.Barter.route) { BarterScreen() }
+        composable(ScreenNavigation.Buy.route) { Buy() }
+        composable(ScreenNavigation.Account.route) { Account() }
+    }
+}
+
+@Composable
+fun BottomNavigationBar(navController: NavController){
+    BottomNavigation {
+        val navBackStackEntry by navController.currentBackStackEntryAsState()
+        val isRouteSelected : (String) -> Boolean = { route ->
+            navBackStackEntry?.destination?.hierarchy?.any { it.route == route } == true
+        }
+        ScreenNavigation.ALL_SCREEN_NAVIGATIONS.forEach { screen ->
+            val selected = isRouteSelected(screen.route)
+            BottomNavigationItem(
+                modifier = Modifier.background(
+                    if(selected) primaryDarkColor else Color.White
+                ),
+                icon = { Icon(screen.icon, "xd") },
+                label = { Text(stringResource(screen.resourceId)) },
+                selected = selected,
+                onClick = {
+                    navController.navigate(screen.route) {
+                        // Pop up to the start destination of the graph to
+                        // avoid building up a large stack of destinations
+                        // on the back stack as users select items
+                        popUpTo(navController.graph.findStartDestination().id) {
+                            saveState = true
+                        }
+                        // Avoid multiple copies of the same destination when
+                        // reselecting the same item
+                        launchSingleTop = true
+                        // Restore state when reselecting a previously selected item
+                        restoreState = true
+                    }
+                }
+            )
+        }
+    }
+}
+
