@@ -3,4 +3,11 @@
     <string name="barter">Barter</string>
     <string name="buy">Buy</string>
     <string name="account">Account</string>
+    <string name="offers">Offers</string>
+    <string name="leaf_points">leaf points</string>
+    <string name="favourites">Favourites</string>
+    <string name="your">Your</string>
+    <string name="log_in">Log in</string>
+    <string name="your_account">Your Account</string>
+    <string name="sign_up">Sign Up</string>
 </resources>
