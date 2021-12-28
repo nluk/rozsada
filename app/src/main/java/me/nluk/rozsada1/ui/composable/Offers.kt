@@ -24,7 +24,6 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,7 +31,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.compose.rememberImagePainter
 import com.google.accompanist.placeholder.PlaceholderHighlight
-import com.google.accompanist.placeholder.material.fade
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -48,15 +46,22 @@ import me.nluk.rozsada1.services.OffersService
 import me.nluk.rozsada1.ui.theme.primaryColor
 import java.time.Instant
 import java.util.*
-import java.util.UUID.randomUUID
 import javax.inject.Inject
 import kotlin.collections.ArrayList
 import com.google.accompanist.placeholder.material.placeholder
+import com.google.accompanist.placeholder.material.shimmer
+import me.nluk.rozsada1.model.SearchInput
+import me.nluk.rozsada1.services.SearchService
+import kotlin.time.Duration
+import kotlin.time.ExperimentalTime
 
+@ExperimentalTime
 @ExperimentalFoundationApi
 @Composable
 fun OffersScreen(model: OfferScreenViewModel = hiltViewModel()) {
-    val offers = model.offers.collectAsState().value
+    val recentOffers = model.recentOffers.collectAsState().value
+    val searchOffers = model.searchOffers.collectAsState().value
+    val search = model.search.collectAsState().value
     val favourites = model.favourites.collectAsState(emptySet()).value
     val authenticated = model.authenticated.collectAsState().value
     val initialLoad = model.initialLoad.value
@@ -71,64 +76,15 @@ fun OffersScreen(model: OfferScreenViewModel = hiltViewModel()) {
         }
     }
     OffersScreenContent(
-        offers,
+        if(search != null) searchOffers else recentOffers,
         favourites,
         offerClick,
         model::nextPage,
+search to { s -> model.setSearchText(s)},
         initialLoad
     )
 }
 
-@ExperimentalFoundationApi
-@Preview(showBackground = true)
-@Composable
-fun OffersScreenPreview() {
-    val firstId = randomUUID().toString()
-    OffersScreenContent(
-        offers = listOf(
-            Offer(
-                userId = randomUUID().toString(),
-                id = firstId,
-                title = "Title",
-                images = listOf(
-                    "https://res.cloudinary.com/patch-gardens/image/upload/c_fill,f_auto,h_400,q_auto:good,w_400/v1519993399/products/boston-fern-42361f.jpg",
-                ),
-                price = 12.0,
-                createdAt = Instant.now(),
-                description = "A plant",
-                city = "Koluszki"
-            ),
-            Offer(
-                userId = randomUUID().toString(),
-                id = randomUUID().toString(),
-                title = "Title",
-                images = listOf(
-                    "https://res.cloudinary.com/patch-gardens/image/upload/c_fill,f_auto,h_400,q_auto:good,w_400/v1565100347/products/dracaena-fragrans-8939ef.jpg",
-                ),
-                points = 100,
-                createdAt = Instant.now(),
-                description = "A plant",
-                city = "Łódź"
-            ),
-            Offer(
-                userId = randomUUID().toString(),
-                id = randomUUID().toString(),
-                title = "Title",
-                images = listOf(
-                    "https://res.cloudinary.com/patch-gardens/image/upload/c_fill,f_auto,h_400,q_auto:good,w_400/v1630681968/sisao6j1iih1krdubqou.jpg",
-                ),
-                price = 12.0,
-                createdAt = Instant.now(),
-                description = "A plant",
-                city = "Zgierz"
-            ),
-        ),
-        favourites = setOf(firstId),
-        {},
-        {},
-        false
-    )
-}
 
 @ExperimentalFoundationApi
 @Composable
@@ -137,23 +93,41 @@ fun OffersScreenContent(
     favourites: Set<String>,
     offerClick: (offerId: String) -> Unit,
     nextPage: (offer: Offer) -> Unit,
+    offerSearch : Pair<SearchInput?, (String) -> Unit>,
     initialLoad: Boolean
 ) {
-    LazyVerticalGrid(
-        modifier = Modifier.padding(horizontal = 4.dp),
-        cells = GridCells.Fixed(2)
-    ) {
-        items(offers) { offer: Offer ->
-            nextPage(offer)
-            OfferCard(offer, offer.id in favourites, offerClick)
+    Column(modifier = Modifier.fillMaxSize()) {
+        Card(modifier = Modifier.padding(4.dp)) {
+            TextField(
+                value = offerSearch.first?.text ?: "",
+                onValueChange = { value -> offerSearch.second(value) },
+                colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.Transparent),
+                placeholder = { Text(stringResource(R.string.search_offer)) }
+            )
         }
-        if(initialLoad){
-            items(8) {
-                OfferCardPlaceholder()
+        LazyVerticalGrid(
+            modifier = Modifier.padding(horizontal = 4.dp),
+            cells = GridCells.Fixed(2)
+        ) {
+            if(offerSearch.first != null){
+                items(offers) { offer: Offer ->
+                    OfferCard(offer, offer.id in favourites, offerClick)
+                }
             }
-        }
-        items(if (offers.size.isEven) 1 else 2){
-            Spacer(modifier = Modifier.padding(vertical = 25.dp))
+            else{
+                items(offers) { offer: Offer ->
+                    nextPage(offer)
+                    OfferCard(offer, offer.id in favourites, offerClick)
+                }
+            }
+            if (initialLoad) {
+                items(8) {
+                    OfferCardPlaceholder()
+                }
+            }
+            items(if (offers.size.isEven) 1 else 2) {
+                Spacer(modifier = Modifier.padding(vertical = 25.dp))
+            }
         }
     }
 }
@@ -188,7 +162,7 @@ fun OfferCardPlaceholder(){
                             .weight(4.0f)
                             .placeholder(
                                 visible = true,
-                                highlight = PlaceholderHighlight.fade(),
+                                highlight = PlaceholderHighlight.shimmer(),
                             ),
                         fontSize = 14.sp,
                         text = "PLACEHOLDER",
@@ -209,7 +183,7 @@ fun OfferCardPlaceholder(){
                 Text(
                     modifier = Modifier.placeholder(
                         visible = true,
-                        highlight = PlaceholderHighlight.fade()
+                        highlight = PlaceholderHighlight.shimmer()
                     ),
                     text = "PLACEHOLDER",
                     fontWeight = FontWeight.Bold
@@ -224,7 +198,7 @@ fun OfferCardPlaceholder(){
                 Text(
                     modifier = Modifier.placeholder(
                         visible = true,
-                        highlight = PlaceholderHighlight.fade()
+                        highlight = PlaceholderHighlight.shimmer()
                     ),
                     text = "PLACEHOLDER",
                     fontSize = 12.sp,
@@ -369,16 +343,22 @@ fun OfferTimeLoc(created: Instant, location: String) {
     )
 }
 
+@ExperimentalTime
 @HiltViewModel
 class OfferScreenViewModel @Inject constructor(
     private val offersService: OffersService,
     private val favouritesService: FavouritesService,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val searchService: SearchService
 ) : ViewModel() {
 
-    private val _offers = MutableStateFlow<List<Offer>>(emptyList())
-    val offers: StateFlow<List<Offer>>
-        get() = _offers
+    private val _recentOffers = MutableStateFlow<List<Offer>>(emptyList())
+
+    private val _searchOffers = MutableStateFlow<List<Offer>>(emptyList())
+
+    val recentOffers: StateFlow<List<Offer>> = _recentOffers
+
+    val searchOffers : StateFlow<List<Offer>> = _searchOffers
 
     var favourites: Flow<Set<String>> = emptyFlow()
 
@@ -386,29 +366,35 @@ class OfferScreenViewModel @Inject constructor(
 
     val initialLoad = mutableStateOf(true)
 
+    val search = MutableStateFlow<SearchInput?>(null)
+
     val authenticated = authService.authenticationStatusFlow()
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            _offers.value = offersService.getRecentOffers(NextPage.of(null, 20L))
+            delay(1_000)
+            _recentOffers.value = offersService.getRecentOffers(NextPage.of(null, 20L))
             favourites = favouritesService.favouriteOfferIds()
             initialLoad.value = false
+            searchService.getOffers(validSearchInput()).flowOn(Dispatchers.IO).collectLatest {
+                _searchOffers.value = it
+            }
         }
     }
 
     fun nextPage(offer: Offer) = viewModelScope.launch(Dispatchers.IO) {
-        if (!(initialLoad.value || offer.id != offers.value.last().id)) {
-            page = NextPage.of(offers.value.last().createdAt.toString(), 20L)
+        if (!(initialLoad.value || offer.id != recentOffers.value.last().id)) {
+            page = NextPage.of(recentOffers.value.last().createdAt.toString(), 20L)
             val newOffers = offersService.getRecentOffers(page)
             appendOffers(newOffers)
         }
     }
 
     private fun appendOffers(newOffers: List<Offer>) {
-        val totalOffers = ArrayList<Offer>(newOffers.size + offers.value.size)
-        totalOffers.addAll(offers.value)
+        val totalOffers = ArrayList<Offer>(newOffers.size + recentOffers.value.size)
+        totalOffers.addAll(recentOffers.value)
         totalOffers.addAll(newOffers)
-        _offers.value = totalOffers
+        _recentOffers.value = totalOffers
     }
 
     fun toggleFavorite(offerId: String) = viewModelScope.launch(Dispatchers.IO) {
@@ -419,5 +405,22 @@ class OfferScreenViewModel @Inject constructor(
             Log.e("Offers", "Marking offer $offerId")
             favouritesService.markFavourite(offerId)
         }
+    }
+
+    @ExperimentalTime
+    fun validSearchInput() = search.filterNotNull().filter { it.text.length >= 3 }.debounce(Duration.milliseconds(500))
+
+    fun setSearchText(newSearchText : String?){
+        _searchOffers.value = emptyList()
+        if(newSearchText.isNullOrBlank()){
+            search.value = null
+        }
+        else{
+            search.value = search.value?.copy(text = newSearchText) ?: SearchInput(newSearchText)
+        }
+    }
+
+    fun setSearchCategory(categoryId : Int?){
+        search.value = search.value?.copy(categoryId = categoryId)
     }
 }

@@ -5,6 +5,7 @@ plugins {
     id 'dagger.hilt.android.plugin'
     id 'com.google.gms.google-services'
     id 'org.jetbrains.kotlin.plugin.serialization' version '1.6.0'
+    id 'com.google.android.libraries.mapsplatform.secrets-gradle-plugin'
 }
 
 android {
@@ -91,6 +92,12 @@ dependencies {
     implementation 'com.google.firebase:firebase-firestore-ktx:24.0.0'
     // https://mvnrepository.com/artifact/com.google.firebase/firebase-common-ktx
     implementation 'com.google.firebase:firebase-common-ktx:20.0.0'
+    implementation "com.jakewharton.retrofit:retrofit2-kotlinx-serialization-converter:0.8.0"
+    implementation "com.github.andrewoma.dexx:kollection:0.7"
+    implementation "com.google.android.libraries.maps:maps:3.1.0-beta"
+    implementation "com.google.maps.android:maps-v3-ktx:2.2.0"
+    implementation 'com.google.android.gms:play-services-location:18.0.0'
+
 
 
 
@@ -105,3 +112,4 @@ dependencies {
 kapt {
     correctErrorTypes true
 }
+

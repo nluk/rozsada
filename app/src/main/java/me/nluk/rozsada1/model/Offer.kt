@@ -22,5 +22,14 @@ data class Offer(
     @SerialName("created_at")
     @Serializable(with = InstantSerializer::class)
     val createdAt: Instant,
-    val city: String
+    val city: String,
+    val location: Location?,
+    @SerialName("category_id")
+    val categoryId : Int
+)
+
+@Serializable
+data class Location(
+    val lat : Float,
+    val lon : Float
 )

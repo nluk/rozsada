@@ -48,6 +48,15 @@ class AuthServiceImpl @Inject constructor(val firebaseAuth : FirebaseAuth) : Aut
         return null
     }
 
+    override suspend fun signUp(username: String, password: String): AuthError? {
+        try {
+            firebaseAuth.createUserWithEmailAndPassword(email = username, password)
+        }catch (e : FirebaseAuthException){
+            return AuthError(e.message ?: "Unknown Auth Error")
+        }
+        return null
+    }
+
     override suspend fun logout() {
         firebaseAuth.signOut()
     }

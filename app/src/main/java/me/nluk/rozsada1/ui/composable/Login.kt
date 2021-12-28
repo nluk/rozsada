@@ -18,12 +18,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -45,9 +48,21 @@ import java.lang.Exception
 import java.util.*
 import javax.inject.Inject
 
+
+@Composable fun RequireLogin(isLoggedIn : Boolean, composable : @Composable () -> Unit){
+    if(isLoggedIn){
+        composable()
+    }
+    else{
+        LoginRegisterScreen()
+    }
+}
+
 @Composable
 fun LoginRegisterScreen(model : LoginScreenViewModel = hiltViewModel()){
     var tabState by remember { mutableStateOf(0) }
+    val loginError = model.loginError.collectAsState().value
+    val signupError = model.signupError.collectAsState().value
     Surface(
         modifier = Modifier
             .padding(vertical = 10.dp, horizontal = 10.dp)
@@ -69,14 +84,24 @@ fun LoginRegisterScreen(model : LoginScreenViewModel = hiltViewModel()){
         )
         Divider(color = Purple700, thickness = 4.dp)
         val tabs = listOf(
-            AuthTab(R.string.log_in){ LoginScreen(model) },
-            AuthTab(R.string.sign_up){ SignUp() }
+            AuthTab(R.string.log_in){ AuthScreen(
+                error = loginError,
+                clearError =  model::clearLoginError,
+                onAuthInputSubmit = model::login,
+                buttonTextStringResId = R.string.log_in
+            ) },
+            AuthTab(R.string.sign_up){ AuthScreen(
+                error = signupError,
+                clearError = model::clearSignupError,
+                onAuthInputSubmit = model::signUp,
+                buttonTextStringResId = R.string.sign_up
+            )}
         )
         TabRow(selectedTabIndex = tabState) {
             tabs.forEachIndexed { index, tab ->
                 val selected = tabState == index
                 Tab(
-                    modifier = Modifier.background(color = if(selected) Purple200 else Purple500),
+                    modifier = Modifier.background(color = if(selected) Purple500 else Purple700),
                     text = {
                         Text(stringResource(id = tab.titleId))
                     },
@@ -90,27 +115,44 @@ fun LoginRegisterScreen(model : LoginScreenViewModel = hiltViewModel()){
     }
 }
 
+typealias OnAuthInputSubmit = (username : String, password : String) -> Unit
+
 @Composable
-fun LoginScreen(model : LoginScreenViewModel){
-    val error = model.error.collectAsState().value
+fun AuthScreen(
+    error: AuthError?,
+    clearError : ()->Unit,
+    onAuthInputSubmit: OnAuthInputSubmit,
+    buttonTextStringResId : Int
+){
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     TextField(
         modifier =Modifier.padding(start = 25.dp, end = 25.dp, top = 25.dp) ,
         value = username,
+        label = { Text(stringResource(R.string.email)) },
+        placeholder = { Text(stringResource(R.string.email)) },
         onValueChange = {
-            model.clearError()
+            clearError()
             username = it
         }
     )
     Spacer(modifier = Modifier.padding(vertical = 10.dp))
-    TextField(value = password, onValueChange = {
-        model.clearError()
+    TextField(
+        value = password,
+        singleLine = true,
+        label = { Text(stringResource(R.string.password)) },
+        placeholder = { Text(stringResource(R.string.password)) },
+        visualTransformation = PasswordVisualTransformation(),
+        onValueChange = {
+        clearError()
         password = it
     })
     Spacer(modifier = Modifier.padding(vertical = 10.dp))
-    LoginButton(enabled = username.isNotBlank() && password.isNotBlank()) {
-        model.login(username, password)
+    Button(
+        enabled = username.isNotBlank() && password.isNotBlank(),
+        onClick = { onAuthInputSubmit(username, password) }
+    ) {
+        Text(text = stringResource(buttonTextStringResId))
     }
     error?.let {
         ErrorInfo(error)
@@ -139,74 +181,27 @@ fun ErrorInfo(authError: AuthError){
 
 
 
-@Preview
-@Composable
-fun ErrorInfoPreview(){
-    ErrorInfo(authError = AuthError("Some error"))
-}
-
-@Composable
-fun LoginButton(enabled : Boolean, onClick : () -> Unit){
-    Button(
-        enabled = enabled,
-        onClick = onClick
-    ) {
-        Text(text = stringResource(R.string.log_in))
-    }
-}
-
-@SuppressLint("StateFlowValueCalledInComposition")
-@Composable
-@Preview
-fun LoginScreenPreview(){
-
-    val authService = object : AuthService{
-        override fun authenticationStatusFlow(): StateFlow<Boolean> {
-            TODO("Not yet implemented")
-        }
-
-        override fun authUserFlow(): StateFlow<FirebaseUser?> {
-            TODO("Not yet implemented")
-        }
-
-        override fun isAuthenticated(): Boolean {
-            TODO("Not yet implemented")
-        }
-
-        override suspend fun login(username: String, password: String): AuthError? {
-            TODO("Not yet implemented")
-        }
-
-        override suspend fun logout() {
-            TODO("Not yet implemented")
-        }
-
-        override suspend fun <T> callAuthenticated(f: suspend (userId: String) -> T?): T? {
-            TODO("Not yet implemented")
-        }
-
-        override suspend fun runAuthenticated(f: suspend (userId: String) -> Unit) {
-            TODO("Not yet implemented")
-        }
-    }
-    val model = LoginScreenViewModel(authService)
-    model.error.value = AuthError("Some error ********* ******** **** ***")
-    LoginScreen(model)
-}
-
-
 @HiltViewModel
 class LoginScreenViewModel @Inject constructor(
     private val authService: AuthService
 ) : ViewModel(){
 
-    val error = MutableStateFlow<AuthError?>(null)
+    val loginError = MutableStateFlow<AuthError?>(null)
+    val signupError = MutableStateFlow<AuthError?>(null)
 
     fun login(username : String, password : String) = viewModelScope.launch(Dispatchers.IO) {
-        error.value = authService.login(username, password)
+        loginError.value = authService.login(username, password)
     }
 
-    fun clearError(){
-        error.value = null
+    fun signUp(username : String, password : String) = viewModelScope.launch(Dispatchers.IO) {
+        signupError.value = authService.signUp(username, password)
+    }
+
+    fun clearLoginError(){
+        loginError.value = null
+    }
+
+    fun clearSignupError(){
+        signupError.value = null
     }
 }

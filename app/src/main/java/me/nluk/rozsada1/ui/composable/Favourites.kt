@@ -37,20 +37,13 @@ import javax.inject.Inject
 @Composable
 fun FavouritesScreen(
     model : FavouritesScreenViewModel = hiltViewModel()
-){
-    val isAuthenticated = model.authenticated.collectAsState().value
+) =  RequireLogin(model.authenticated.collectAsState().value) {
     val favourites = model.favourites.collectAsState().value
-
-    if(isAuthenticated) {
-        Column(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            TitleText(text = listOf(stringResource(id = R.string.your), stringResource(id = R.string.favourites)).joinToString(" "))
-            FavouriteOffersGrid(offers = favourites, removeFavourite = model::removeFavourite)
-        }
-    }
-    else {
-        LoginRegisterScreen()
+    Column(
+        modifier = Modifier.fillMaxSize()
+    ) {
+        TitleText(text = listOf(stringResource(id = R.string.your), stringResource(id = R.string.favourites)).joinToString(" "))
+        FavouriteOffersGrid(offers = favourites, removeFavourite = model::removeFavourite)
     }
 }
 
@@ -87,7 +80,7 @@ fun FavouritesScreenPreview(){
 @HiltViewModel
 class FavouritesScreenViewModel @Inject constructor(
     private val favouritesService: FavouritesService,
-    private val authService: AuthService
+    authService: AuthService
 ) : ViewModel() {
 
     val favourites : MutableStateFlow<List<Offer>> = MutableStateFlow(emptyList())

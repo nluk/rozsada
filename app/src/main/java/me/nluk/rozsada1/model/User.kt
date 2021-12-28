@@ -8,17 +8,14 @@ import kotlinx.serialization.Serializable
 @Keep
 data class User(
     val id : String = "",
-    val avatar : String = "",
+    val email : String = "",
+    val avatar : String? = null,
     @PropertyName("offer_stats")
     var offerStats: OfferStats = OfferStats(
         finished = 0,
         inProgress = 0
     ),
-    val openid : OpenId = OpenId(
-        familyName = "",
-        givenName = "",
-        phoneNumber = ""
-    ),
+    val openid : OpenId? = null,
     val favourites : List<String> = emptyList()
 )
 

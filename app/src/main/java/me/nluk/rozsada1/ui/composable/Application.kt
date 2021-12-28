@@ -19,8 +19,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.google.accompanist.pager.ExperimentalPagerApi
 import me.nluk.rozsada1.ui.theme.*
 
+@ExperimentalPagerApi
 @ExperimentalFoundationApi
 @Composable
 fun RozsadaApp(){
@@ -35,6 +37,7 @@ fun RozsadaApp(){
     }
 }
 
+@ExperimentalPagerApi
 @ExperimentalFoundationApi
 @Composable
 fun NavHostContent(innerPadding: PaddingValues, navController: NavHostController){
@@ -46,6 +49,8 @@ fun NavHostContent(innerPadding: PaddingValues, navController: NavHostController
             .background(veryLightGray)
     ) {
         composable(ScreenNavigation.Offers.route) { OffersScreen() }
+        composable(ScreenNavigation.CreateOffer.route) { AddOfferScreen() }
+        composable(ScreenNavigation.Chats.route) { ChatScreen() }
         composable(ScreenNavigation.Favourites.route) { FavouritesScreen() }
         composable(ScreenNavigation.Account.route) { Account() }
     }
@@ -72,8 +77,10 @@ fun BottomNavigationBar(navController: NavController){
                 },
                 label = {
                     Text(
+                        maxLines = 1,
                         text = stringResource(screen.resourceId),
-                        color =selectionBasedColor
+                        color =selectionBasedColor,
+                        fontSize = 10.sp,
                     )
                 },
                 selected = selected,

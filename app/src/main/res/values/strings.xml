@@ -10,4 +10,16 @@
     <string name="log_in">Log in</string>
     <string name="your_account">Your Account</string>
     <string name="sign_up">Sign Up</string>
+    <string name="password">Password</string>
+    <string name="email">Email</string>
+    <string name="create_offer">Create offer</string>
+    <string name="add_offer_images">Add offer images</string>
+    <string name="chats">Chats</string>
+    <string name="ofer_title_placeholder">eg. Ruby Rose</string>
+    <string name="offer_title">Offer title</string>
+    <string name="category">Category</string>
+    <string name="offer_description">Offer description</string>
+    <string name="offer_description_placeholder">Enter details of your offer</string>
+    <string name="enter_address">Enter address</string>
+    <string name="search_offer">Search for offer</string>
 </resources>

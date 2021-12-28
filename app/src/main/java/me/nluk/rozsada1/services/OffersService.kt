@@ -8,4 +8,5 @@ import me.nluk.rozsada1.model.Offer
 
 interface OffersService {
     suspend fun getRecentOffers(page : FirestorePaging<String>) : List<Offer>
+    suspend fun getOffersByIds(ids : Flow<List<String>>) : Flow<List<Offer>>
 }
