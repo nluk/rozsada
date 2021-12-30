@@ -6,18 +6,18 @@ import com.tylerthrailkill.helpers.prettyprint.pp
 import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.FirebaseAuthException
 import dev.gitlive.firebase.auth.FirebaseUser
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
+import dev.gitlive.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import kotlinx.serialization.InternalSerializationApi
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.serializer
 import me.nluk.rozsada1.services.AuthError
 import me.nluk.rozsada1.services.AuthService
+import me.nluk.rozsada1.services.UserService
 import javax.inject.Inject
 
-class AuthServiceImpl @Inject constructor(val firebaseAuth : FirebaseAuth) : AuthService{
+class AuthServiceImpl @Inject constructor(val firebaseAuth : FirebaseAuth, val firestore: FirebaseFirestore) : AuthService{
 
     private val authServiceScope = CoroutineScope(Dispatchers.IO)
     private val currentUserState = MutableStateFlow(firebaseAuth.currentUser)
@@ -26,10 +26,8 @@ class AuthServiceImpl @Inject constructor(val firebaseAuth : FirebaseAuth) : Aut
     @InternalSerializationApi
     private val authStateFlowJob = authServiceScope.launch {
         firebaseAuth.authStateChanged.flowOn(Dispatchers.IO).collectLatest {
-            it.pp()
             currentUserState.value = it
             loginState.value = it != null
-            println("User state is now [${loginState.value}]")
         }
     }
 
@@ -48,9 +46,10 @@ class AuthServiceImpl @Inject constructor(val firebaseAuth : FirebaseAuth) : Aut
         return null
     }
 
-    override suspend fun signUp(username: String, password: String): AuthError? {
+    override suspend fun signUp(username : String, password : String, firstName : String, lastName : String) : AuthError?{
         try {
             firebaseAuth.createUserWithEmailAndPassword(email = username, password)
+            updateOpenId(firstName, lastName)
         }catch (e : FirebaseAuthException){
             return AuthError(e.message ?: "Unknown Auth Error")
         }
@@ -80,6 +79,21 @@ class AuthServiceImpl @Inject constructor(val firebaseAuth : FirebaseAuth) : Aut
         }
         else{
             Log.e("AuthService", "User is not authenticated")
+        }
+    }
+
+    suspend fun updateOpenId(firstName: String, lastName: String) = authServiceScope.launch{
+        while (true){
+            val user = currentUserState.value
+            if(user == null){
+                delay(200)
+                continue
+            }
+            val userDoc = firestore.collection("users").document(user.uid).get()
+            if(userDoc.exists){
+                userDoc.reference.update("openid" to mapOf("family_name" to lastName, "given_name" to firstName))
+                break
+            }
         }
     }
 }

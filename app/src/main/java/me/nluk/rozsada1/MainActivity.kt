@@ -29,6 +29,7 @@ class MainActivity : ComponentActivity() {
             Firebase.firestore.clearPersistence()
             Firebase.firestore.useEmulator("10.0.2.2", 8080)
             Firebase.auth.useEmulator("10.0.2.2", 9099)
+//            Firebase.auth.signOut()
         //}
         super.onCreate(savedInstanceState)
         setContent {
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@ExperimentalTime
 @ExperimentalPagerApi
 @ExperimentalFoundationApi
 @Preview(showBackground = true)

@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Rozsada1</string>
+    <string name="barter">Wymiana</string>
+    <string name="buy">Kup</string>
+    <string name="account">Konto</string>
+    <string name="offers">Oferty</string>
+    <string name="leaf_points">pkt</string>
+    <string name="favourites">Ulubione</string>
+    <string name="your">Twoje</string>
+    <string name="log_in">Zaloguj się</string>
+    <string name="your_account">Twoje Konto</string>
+    <string name="sign_up">Zarejestruj się</string>
+    <string name="password">Hasło</string>
+    <string name="email">Email</string>
+    <string name="create_offer">Dodaj ofertę</string>
+    <string name="add_offer_images">Dodaj zdjęcia</string>
+    <string name="chats">Czaty</string>
+    <string name="ofer_title_placeholder">np. Róża Wielkolistna</string>
+    <string name="offer_title">Nazwa oferty</string>
+    <string name="category">Kategoria</string>
+    <string name="offer_description">Opis oferty</string>
+    <string name="offer_description_placeholder">Podaj szczegóły oferty</string>
+    <string name="enter_address">Podaj adres</string>
+    <string name="search_offer">Wyszukaj ofertę</string>
+    <string name="selected_address">Wybrany adres</string>
+    <string name="set_location">Wskaż lokalizację</string>
+    <string name="location">Lokalizacja</string>
+    <string name="create">Dodaj</string>
+    <string name="first_name">Imię</string>
+    <string name="last_name">Nazwisko</string>
+    <string name="nothing_here">Nic tu nie ma…</string>
+    <string name="cost">Koszt</string>
+    <string name="offer_added">Twoja oferta została dodana!</string>
+    <string name="active_offers">Aktywne oferty</string>
+    <string name="finished_offers">Zakończone oferty</string>
+    <string name="hi">Cześć</string>
+</resources>

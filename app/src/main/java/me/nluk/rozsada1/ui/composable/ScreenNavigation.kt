@@ -15,14 +15,14 @@ sealed class ScreenNavigation(
 ) {
 
     companion object{
-        val ALL_SCREEN_NAVIGATIONS : List<ScreenNavigation> = listOf(Offers, Favourites, CreateOffer, Chats, Account)
+        val ALL_SCREEN_NAVIGATIONS : List<ScreenNavigation> = listOf(Offers, Favourites, CreateOffer, /*Chats,*/ Account)
     }
 
     object Offers : ScreenNavigation("offers", R.string.offers, Icons.Rounded.Yard, Icons.Outlined.Yard)
     object Account : ScreenNavigation("account", R.string.account, Icons.Rounded.Person, Icons.Outlined.PersonOutline)
     object Favourites : ScreenNavigation("favourites", R.string.favourites, Icons.Rounded.Favorite, Icons.Outlined.FavoriteBorder)
     object CreateOffer : ScreenNavigation("create_offer", R.string.create_offer, Icons.Rounded.AddCircle, Icons.Outlined.AddCircleOutline)
-    object Chats : ScreenNavigation("chats", R.string.chats, Icons.Rounded.ChatBubble, Icons.Outlined.ChatBubbleOutline)
+    //object Chats : ScreenNavigation("chats", R.string.chats, Icons.Rounded.ChatBubble, Icons.Outlined.ChatBubbleOutline)
 
     fun icon(selected : Boolean) = if(selected) selectedIcon else icon
 }

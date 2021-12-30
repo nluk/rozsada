@@ -44,6 +44,7 @@ import me.nluk.rozsada1.services.impl.AuthServiceImpl
 import me.nluk.rozsada1.ui.theme.Purple200
 import me.nluk.rozsada1.ui.theme.Purple500
 import me.nluk.rozsada1.ui.theme.Purple700
+import me.nluk.rozsada1.ui.theme.veryLightGray
 import java.lang.Exception
 import java.util.*
 import javax.inject.Inject
@@ -80,21 +81,23 @@ fun LoginRegisterScreen(model : LoginScreenViewModel = hiltViewModel()){
         Image(
             painterResource(R.drawable.rozsada_logo),
             "Rozsada logo",
-            modifier = Modifier.padding(top = 24.dp, bottom = 16.dp)
+            modifier = Modifier.padding(top = 10.dp, bottom = 16.dp)
         )
         Divider(color = Purple700, thickness = 4.dp)
         val tabs = listOf(
             AuthTab(R.string.log_in){ AuthScreen(
                 error = loginError,
                 clearError =  model::clearLoginError,
-                onAuthInputSubmit = model::login,
-                buttonTextStringResId = R.string.log_in
+                onAuthInputSubmit = { model.login(it as LoginInput) },
+                buttonTextStringResId = R.string.log_in,
+                isRegister = false
             ) },
             AuthTab(R.string.sign_up){ AuthScreen(
                 error = signupError,
                 clearError = model::clearSignupError,
-                onAuthInputSubmit = model::signUp,
-                buttonTextStringResId = R.string.sign_up
+                onAuthInputSubmit = { model.signUp(it as RegistrationInput)},
+                buttonTextStringResId = R.string.sign_up,
+                isRegister = true
             )}
         )
         TabRow(selectedTabIndex = tabState) {
@@ -115,10 +118,17 @@ fun LoginRegisterScreen(model : LoginScreenViewModel = hiltViewModel()){
     }
 }
 
-typealias OnAuthInputSubmit = (username : String, password : String) -> Unit
+sealed class AuthInput
+
+data class LoginInput(val username: String, val password: String) : AuthInput()
+
+data class RegistrationInput(val username: String, val password: String, val firstName : String, val lastName : String) : AuthInput()
+
+typealias OnAuthInputSubmit = (authInput : AuthInput) -> Unit
 
 @Composable
 fun AuthScreen(
+    isRegister : Boolean,
     error: AuthError?,
     clearError : ()->Unit,
     onAuthInputSubmit: OnAuthInputSubmit,
@@ -126,6 +136,8 @@ fun AuthScreen(
 ){
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var firstName by remember { mutableStateOf("") }
+    var lastName by remember { mutableStateOf("") }
     TextField(
         modifier =Modifier.padding(start = 25.dp, end = 25.dp, top = 25.dp) ,
         value = username,
@@ -134,7 +146,8 @@ fun AuthScreen(
         onValueChange = {
             clearError()
             username = it
-        }
+        },
+        colors = TextFieldDefaults.textFieldColors(backgroundColor = veryLightGray)
     )
     Spacer(modifier = Modifier.padding(vertical = 10.dp))
     TextField(
@@ -144,13 +157,40 @@ fun AuthScreen(
         placeholder = { Text(stringResource(R.string.password)) },
         visualTransformation = PasswordVisualTransformation(),
         onValueChange = {
-        clearError()
-        password = it
-    })
+            clearError()
+            password = it
+        },
+        colors = TextFieldDefaults.textFieldColors(backgroundColor = veryLightGray)
+    )
+
+    if(isRegister){
+        Spacer(modifier = Modifier.padding(vertical = 10.dp))
+        TextField(
+            value = firstName,
+            singleLine = true,
+            label = { Text(stringResource(R.string.first_name)) },
+            placeholder = { Text(stringResource(R.string.first_name)) },
+            onValueChange = {
+                firstName = it
+            },
+            colors = TextFieldDefaults.textFieldColors(backgroundColor = veryLightGray)
+            )
+        Spacer(modifier = Modifier.padding(vertical = 10.dp))
+        TextField(
+            value = lastName,
+            singleLine = true,
+            label = { Text(stringResource(R.string.last_name)) },
+            placeholder = { Text(stringResource(R.string.last_name)) },
+            onValueChange = {
+                lastName = it
+            },
+            colors = TextFieldDefaults.textFieldColors(backgroundColor = veryLightGray)
+            )
+    }
     Spacer(modifier = Modifier.padding(vertical = 10.dp))
     Button(
-        enabled = username.isNotBlank() && password.isNotBlank(),
-        onClick = { onAuthInputSubmit(username, password) }
+        enabled = username.isNotBlank() && password.isNotBlank() && (!isRegister || (firstName.isNotBlank() && lastName.isNotBlank())),
+        onClick = { onAuthInputSubmit(if(isRegister) RegistrationInput(username, password, firstName, lastName) else LoginInput(username, password)) }
     ) {
         Text(text = stringResource(buttonTextStringResId))
     }
@@ -180,7 +220,6 @@ fun ErrorInfo(authError: AuthError){
 }
 
 
-
 @HiltViewModel
 class LoginScreenViewModel @Inject constructor(
     private val authService: AuthService
@@ -189,12 +228,14 @@ class LoginScreenViewModel @Inject constructor(
     val loginError = MutableStateFlow<AuthError?>(null)
     val signupError = MutableStateFlow<AuthError?>(null)
 
-    fun login(username : String, password : String) = viewModelScope.launch(Dispatchers.IO) {
-        loginError.value = authService.login(username, password)
+    fun login(loginInput: LoginInput) = viewModelScope.launch(Dispatchers.IO) {
+        loginError.value = authService.login(loginInput.username, loginInput.password)
     }
 
-    fun signUp(username : String, password : String) = viewModelScope.launch(Dispatchers.IO) {
-        signupError.value = authService.signUp(username, password)
+    fun signUp(registrationInput: RegistrationInput) = viewModelScope.launch(Dispatchers.IO) {
+        with(registrationInput){
+            signupError.value = authService.signUp(username, password, firstName, lastName)
+        }
     }
 
     fun clearLoginError(){

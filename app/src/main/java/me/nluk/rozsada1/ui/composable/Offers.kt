@@ -3,12 +3,10 @@ package me.nluk.rozsada1.ui.composable
 import android.text.format.DateUtils
 import android.util.Log
 import android.widget.Toast
-import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.Image
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.GridCells
-import androidx.compose.foundation.lazy.LazyVerticalGrid
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
@@ -24,12 +22,14 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import coil.compose.rememberImagePainter
+import com.google.accompanist.pager.ExperimentalPagerApi
 import com.google.accompanist.placeholder.PlaceholderHighlight
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -50,11 +50,19 @@ import javax.inject.Inject
 import kotlin.collections.ArrayList
 import com.google.accompanist.placeholder.material.placeholder
 import com.google.accompanist.placeholder.material.shimmer
+import com.google.accompanist.swiperefresh.SwipeRefresh
+import com.google.accompanist.swiperefresh.SwipeRefreshState
+import com.google.accompanist.swiperefresh.rememberSwipeRefreshState
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import me.nluk.rozsada1.lib.ComposeStack
 import me.nluk.rozsada1.model.SearchInput
 import me.nluk.rozsada1.services.SearchService
+import me.nluk.rozsada1.ui.theme.Purple700
 import kotlin.time.Duration
 import kotlin.time.ExperimentalTime
 
+@ExperimentalPagerApi
+@ExperimentalCoroutinesApi
 @ExperimentalTime
 @ExperimentalFoundationApi
 @Composable
@@ -65,7 +73,9 @@ fun OffersScreen(model: OfferScreenViewModel = hiltViewModel()) {
     val favourites = model.favourites.collectAsState(emptySet()).value
     val authenticated = model.authenticated.collectAsState().value
     val initialLoad = model.initialLoad.value
-    val offerClick: (offerId: String) -> Unit = when (authenticated) {
+    val isRefreshing = model.isRefreshing.collectAsState()
+    val listState = rememberLazyListState()
+    val likeOffer: (offerId: String) -> Unit = when (authenticated) {
         true -> model::toggleFavorite
         false -> {
             val context = LocalContext.current
@@ -75,14 +85,25 @@ fun OffersScreen(model: OfferScreenViewModel = hiltViewModel()) {
             toast
         }
     }
-    OffersScreenContent(
-        if(search != null) searchOffers else recentOffers,
-        favourites,
-        offerClick,
-        model::nextPage,
-search to { s -> model.setSearchText(s)},
-        initialLoad
-    )
+    val stack by remember { mutableStateOf(ComposeStack()) }
+    val showDetails : (offerId : String) -> Unit = {
+        stack.put {  OfferDetailsScreen(it, stack::clear) }
+    }
+    stack.root.value = {
+        OffersScreenContent(
+            if(search != null) searchOffers else recentOffers,
+            favourites,
+            likeOffer,
+            showDetails,
+            model::nextPage,
+            search to { s -> model.setSearchText(s)},
+            initialLoad,
+            rememberSwipeRefreshState(isRefreshing.value),
+            model::refresh,
+            listState
+        )
+    }
+    stack.RenderTop()
 }
 
 
@@ -91,42 +112,55 @@ search to { s -> model.setSearchText(s)},
 fun OffersScreenContent(
     offers: List<Offer>,
     favourites: Set<String>,
-    offerClick: (offerId: String) -> Unit,
+    likeOffer: (offerId: String) -> Unit,
+    showDetails: (offerId: String) -> Unit,
     nextPage: (offer: Offer) -> Unit,
     offerSearch : Pair<SearchInput?, (String) -> Unit>,
-    initialLoad: Boolean
+    initialLoad: Boolean,
+    isRefreshing : SwipeRefreshState,
+    refresh : () -> Unit,
+    listState: LazyListState
 ) {
     Column(modifier = Modifier.fillMaxSize()) {
-        Card(modifier = Modifier.padding(4.dp)) {
-            TextField(
-                value = offerSearch.first?.text ?: "",
-                onValueChange = { value -> offerSearch.second(value) },
-                colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.Transparent),
-                placeholder = { Text(stringResource(R.string.search_offer)) }
-            )
+        Card(modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth()) {
+            Column {
+                TextField(
+                    modifier = Modifier
+                        .padding(8.dp)
+                        .fillMaxWidth(),
+                    value = offerSearch.first?.text ?: "",
+                    onValueChange = { value -> offerSearch.second(value) },
+                    colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.Transparent),
+                    placeholder = { Text(stringResource(R.string.search_offer)) }
+                )
+            }
         }
-        LazyVerticalGrid(
-            modifier = Modifier.padding(horizontal = 4.dp),
-            cells = GridCells.Fixed(2)
-        ) {
-            if(offerSearch.first != null){
-                items(offers) { offer: Offer ->
-                    OfferCard(offer, offer.id in favourites, offerClick)
+        SwipeRefresh(state = isRefreshing, onRefresh = refresh) {
+            LazyVerticalGrid(
+                modifier = Modifier.padding(horizontal = 4.dp),
+                cells = GridCells.Fixed(2),
+                state = listState
+            ) {
+                if (offerSearch.first != null) {
+                    items(offers) { offer: Offer ->
+                        OfferCard(offer, offer.id in favourites, likeOffer, showDetails)
+                    }
+                } else {
+                    items(offers) { offer: Offer ->
+                        nextPage(offer)
+                        OfferCard(offer, offer.id in favourites, likeOffer, showDetails)
+                    }
                 }
-            }
-            else{
-                items(offers) { offer: Offer ->
-                    nextPage(offer)
-                    OfferCard(offer, offer.id in favourites, offerClick)
+                if ((initialLoad || isRefreshing.isRefreshing) && offerSearch.first == null) {
+                    items(8) {
+                        OfferCardPlaceholder()
+                    }
                 }
-            }
-            if (initialLoad) {
-                items(8) {
-                    OfferCardPlaceholder()
+                items(if (offers.size.isEven) 1 else 2) {
+                    Spacer(modifier = Modifier.padding(vertical = 25.dp))
                 }
-            }
-            items(if (offers.size.isEven) 1 else 2) {
-                Spacer(modifier = Modifier.padding(vertical = 25.dp))
             }
         }
     }
@@ -214,12 +248,14 @@ fun OfferCardPlaceholder(){
 fun OfferCard(
     offer: Offer,
     userFavourite: Boolean,
-    offerClick: (offerId: String) -> Unit
+    likeOffer: (offerId: String) -> Unit,
+    showDetails : (offerId : String) -> Unit
 ) {
     Card(
         Modifier
             .fillMaxWidth()
-            .padding(start = 3.dp, end = 3.dp, top = 4.dp),
+            .padding(start = 3.dp, end = 3.dp, top = 4.dp)
+            .clickable { showDetails(offer.id!!) },
         shape = RoundedCornerShape(12.dp),
         elevation = 12.dp
     ) {
@@ -229,10 +265,10 @@ fun OfferCard(
                 modifier = Modifier.padding(5.dp)
             ) {
                 OfferHeader(
-                    offer.id,
+                    offer.id!!,
                     title = offer.title,
                     favorite = userFavourite,
-                    offerClick = offerClick
+                    likeOffer = likeOffer
                 )
                 if (offer.points != null) {
                     OfferPoints(offer.points)
@@ -279,7 +315,7 @@ fun OfferPoints(points: Int) {
 }
 
 @Composable
-fun OfferImage(dataUrl: String) {
+fun OfferImage(dataUrl: String, height : Dp = 128.dp) {
     Image(
         painter = rememberImagePainter(
             data = dataUrl,
@@ -291,7 +327,7 @@ fun OfferImage(dataUrl: String) {
         contentDescription = null,
         modifier = Modifier
             .fillMaxWidth()
-            .height(128.dp),
+            .height(height),
         contentScale = ContentScale.Crop
     )
 }
@@ -301,10 +337,11 @@ fun OfferHeader(
     id: String,
     title: String,
     favorite: Boolean,
-    offerClick: (offerId: String) -> Unit
+    likeOffer: (offerId: String) -> Unit,
+    horizontalPadding : Dp = 0.dp
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = horizontalPadding),
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
         Text(
@@ -316,12 +353,13 @@ fun OfferHeader(
         )
         IconButton(
             modifier = Modifier.then(Modifier.size(24.dp)),
-            onClick = { offerClick(id) }
+            onClick = { likeOffer(id) }
         ) {
             Icon(
                 if (favorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
                 null,
                 modifier = Modifier.weight(1.0f),
+                tint = Purple700
             )
         }
     }
@@ -370,15 +408,34 @@ class OfferScreenViewModel @Inject constructor(
 
     val authenticated = authService.authenticationStatusFlow()
 
+    val isRefreshing = MutableStateFlow(false)
+
+    val scrollState = mutableStateListOf(0)
+
     init {
         viewModelScope.launch(Dispatchers.IO) {
-            delay(1_000)
             _recentOffers.value = offersService.getRecentOffers(NextPage.of(null, 20L))
             favourites = favouritesService.favouriteOfferIds()
             initialLoad.value = false
             searchService.getOffers(validSearchInput()).flowOn(Dispatchers.IO).collectLatest {
                 _searchOffers.value = it
             }
+        }
+    }
+
+    fun refresh() = viewModelScope.launch(Dispatchers.IO){
+        if(!isRefreshing.value){
+            isRefreshing.value = true
+            val searchValue = search.value
+            if(searchValue != null){
+                _searchOffers.value = searchService.getOffers(searchValue)
+            }else{
+                _recentOffers.value = emptyList()
+                delay(1000L)
+                _recentOffers.value = offersService.getRecentOffers(NextPage.of(null, 20L))
+                page = NextPage.of(null, 10L)
+            }
+            isRefreshing.value = false
         }
     }
 

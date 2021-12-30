@@ -2,6 +2,7 @@ package me.nluk.rozsada1.model
 
 import androidx.annotation.Keep
 import com.google.firebase.firestore.PropertyName
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -10,7 +11,7 @@ data class User(
     val id : String = "",
     val email : String = "",
     val avatar : String? = null,
-    @PropertyName("offer_stats")
+    @SerialName("offer_stats")
     var offerStats: OfferStats = OfferStats(
         finished = 0,
         inProgress = 0
@@ -23,17 +24,17 @@ data class User(
 @Keep
 data class OfferStats(
     val finished : Int,
-    @PropertyName("in_progress")
+    @SerialName("in_progress")
     val inProgress : Int
 )
 
 @Serializable
 @Keep
 data class OpenId(
-    @PropertyName("family_name")
+    @SerialName("family_name")
     val familyName : String,
-    @PropertyName("given_name")
+    @SerialName("given_name")
     val givenName : String,
-    @PropertyName("phone_number")
-    val phoneNumber : String
+    @SerialName("phone_number")
+    val phoneNumber : String? = null
 )

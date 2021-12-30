@@ -9,9 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -24,13 +22,11 @@ import androidx.lifecycle.ViewModel
 import com.google.android.libraries.maps.CameraUpdateFactory
 import com.google.android.libraries.maps.GoogleMap
 import com.google.android.libraries.maps.MapView
-import com.google.android.libraries.maps.SupportMapFragment
 import com.google.android.libraries.maps.model.*
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import me.nluk.rozsada1.R
 import me.nluk.rozsada1.lib.rememberMapViewWithLifecycle
-import me.nluk.rozsada1.ui.theme.Purple200
+import me.nluk.rozsada1.ui.theme.grey
 import me.nluk.rozsada1.ui.theme.lightGrey
 import me.nluk.rozsada1.ui.theme.veryLightGray
 import java.util.*
@@ -38,19 +34,22 @@ import javax.inject.Inject
 
 
 @Composable
-fun MapScreen(exit : () -> Unit, setAddress : (Address) -> Unit, viewModel : MapViewModel = hiltViewModel()){
+fun MapScreen(exit : () -> Unit, setAddress : (Address) -> Unit, initialLatLng: LatLng, viewModel : MapViewModel = hiltViewModel()){
+    viewModel.setInitialLatLng(initialLatLng)
     Surface(color = veryLightGray) {
         val mapView = rememberMapViewWithLifecycle()
         val context = LocalContext.current
-
         Column(Modifier.fillMaxWidth()) {
             Card(modifier = Modifier.weight(1.0f).padding(4.dp)) {
                 Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
-                    OutlinedButton(shape = RoundedCornerShape(100), modifier = Modifier.weight(1.0f), onClick = exit) {
+                    OutlinedButton(shape = RoundedCornerShape(100), modifier = Modifier.weight(1.0f), onClick = {
+                        viewModel.marker = null
+                        exit()
+                    }) {
                         Text(text = "X")
                     }
                     TextField(
-                        value = viewModel.addressText.value,
+                        value = viewModel.addressSearchText.value,
                         onValueChange = { value -> viewModel.onTextChanged(context, value) },
                         modifier = Modifier.weight(8.0f),
                         colors = TextFieldDefaults.textFieldColors(backgroundColor = Color.Transparent),
@@ -58,13 +57,17 @@ fun MapScreen(exit : () -> Unit, setAddress : (Address) -> Unit, viewModel : Map
                     )
                 }
             }
-            Card(modifier = Modifier.weight(1.0f).padding(4.dp)) {
-
+            Card(modifier = Modifier.weight(1.0f).padding(4.dp).align(Alignment.CenterHorizontally) ) {
+                Column{
+                    Text(modifier = Modifier.fillMaxWidth().padding(4.dp), text = stringResource(R.string.selected_address), color = grey)
+                    Text(modifier = Modifier.fillMaxWidth().padding(4.dp), text = viewModel.addressText.value ?: "", color = Color.Black)
+                }
             }
+            val latLng = viewModel.latlng.value ?: initialLatLng
             Box(modifier = Modifier
                 .fillMaxWidth()
                 .weight(8.0f)){
-                MapViewContainer(context, setAddress, mapView, viewModel.latlng.value, viewModel::setupMarker)
+                MapViewContainer(setAddress, mapView, latLng, viewModel::mapClicked)
             }
         }
     }
@@ -72,39 +75,39 @@ fun MapScreen(exit : () -> Unit, setAddress : (Address) -> Unit, viewModel : Map
 
 @Composable
 private fun MapViewContainer(
-    context: Context,
     setAddress: (Address) -> Unit,
     mapView: MapView,
     latLng: LatLng,
-    setupMarker : (Context, GoogleMap, (Address) -> Unit) -> Unit
+    mapClicked : (context : Context, clickLatLng: LatLng, map : GoogleMap, setAddress: (Address) -> Unit) -> Unit
 ) {
+    val context = LocalContext.current
     AndroidView(
         factory = { mapView }
     ) {
         mapView.getMapAsync { map ->
             map.uiSettings.setAllGesturesEnabled(true)
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,  map.cameraPosition.zoom))
-            setupMarker(context, map, setAddress)
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,  Math.max(map.cameraPosition.zoom, 15.0f)))
+            map.setOnMapClickListener{
+                mapClicked(context, it, map, setAddress)
+            }
         }
     }
 }
 
 @HiltViewModel
 class MapViewModel @Inject constructor() : ViewModel(), GoogleMap.OnMapClickListener {
-    var latlng = mutableStateOf(LatLng(50.0, 50.0))
+    var latlng = mutableStateOf<LatLng?>(null)
     var marker : Marker? = null
-    val addressText = mutableStateOf("")
+    val addressSearchText = mutableStateOf("")
+    val addressText = mutableStateOf<String?>(null)
     var timer: CountDownTimer? = null
+    var initialLatLngUsed = false
 
-    fun setupMarker(context: Context, map : GoogleMap, addressSelected: (Address) -> Unit){
-        if(marker == null){
-            val markerStart = latlng.value
+    fun setupMarker(map : GoogleMap){
+        val markerStart = latlng.value
+        if(marker == null && markerStart != null){
             marker = map.addMarker(MarkerOptions().position(markerStart).draggable(false))
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(markerStart,  25.0f))
-            map.setOnMapClickListener{
-                getAddressFromLatLng(context, it)?.also(addressSelected)
-                onMapClick(it)
-            }
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(markerStart,  map.cameraPosition.zoom))
         }
     }
 
@@ -116,7 +119,7 @@ class MapViewModel @Inject constructor() : ViewModel(), GoogleMap.OnMapClickList
     }
 
     fun onTextChanged(context: Context, text: String?){
-        addressText.value = text ?: ""
+        addressSearchText.value = text ?: ""
         if (text.isNullOrBlank()) return
         timer?.cancel()
         timer = object : CountDownTimer(500, 1000) {
@@ -141,5 +144,21 @@ class MapViewModel @Inject constructor() : ViewModel(), GoogleMap.OnMapClickList
     private fun getAddressFromLatLng(context: Context, latLng: LatLng) = Geocoder(context, Locale.getDefault())
         .getFromLocation(latLng.latitude, latLng.longitude, 1)
         .firstOrNull()
+
+    fun setInitialLatLng(initialLatLng: LatLng){
+        if(initialLatLngUsed) return
+        initialLatLngUsed = true
+        updateLatLng(initialLatLng)
+    }
+
+    fun mapClicked(context : Context, clickLatLng: LatLng, map : GoogleMap, setAddress: (Address) -> Unit){
+        setupMarker(map)
+        val address = getAddressFromLatLng(context, clickLatLng)
+        address?.also {
+            addressText.value = it.getAddressLine(0)
+            setAddress(it)
+        }
+        onMapClick(clickLatLng)
+    }
 
 }

@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -20,8 +22,13 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.google.accompanist.pager.ExperimentalPagerApi
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import me.nluk.rozsada1.lib.ComposeStack
 import me.nluk.rozsada1.ui.theme.*
+import kotlin.time.ExperimentalTime
 
+@ExperimentalCoroutinesApi
+@ExperimentalTime
 @ExperimentalPagerApi
 @ExperimentalFoundationApi
 @Composable
@@ -37,6 +44,8 @@ fun RozsadaApp(){
     }
 }
 
+@ExperimentalCoroutinesApi
+@ExperimentalTime
 @ExperimentalPagerApi
 @ExperimentalFoundationApi
 @Composable
@@ -50,7 +59,7 @@ fun NavHostContent(innerPadding: PaddingValues, navController: NavHostController
     ) {
         composable(ScreenNavigation.Offers.route) { OffersScreen() }
         composable(ScreenNavigation.CreateOffer.route) { AddOfferScreen() }
-        composable(ScreenNavigation.Chats.route) { ChatScreen() }
+        //composable(ScreenNavigation.Chats.route) { ChatScreen() }
         composable(ScreenNavigation.Favourites.route) { FavouritesScreen() }
         composable(ScreenNavigation.Account.route) { Account() }
     }

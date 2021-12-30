@@ -4,6 +4,7 @@ import androidx.annotation.Keep
 import com.google.firebase.firestore.DocumentId
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.Transient
 import me.nluk.rozsada1.lib.InstantSerializer
 import java.time.Instant
 
@@ -12,8 +13,8 @@ import java.time.Instant
 data class Offer(
     @SerialName("user_id")
     val userId: String,
-    @DocumentId
-    val id: String,
+    @Transient
+    val id: String? = null,
     val title: String,
     val description: String,
     val images: List<String>,
@@ -30,6 +31,6 @@ data class Offer(
 
 @Serializable
 data class Location(
-    val lat : Float,
-    val lon : Float
+    val lat : Double,
+    val lon : Double
 )

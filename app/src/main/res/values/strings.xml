@@ -22,4 +22,16 @@
     <string name="offer_description_placeholder">Enter details of your offer</string>
     <string name="enter_address">Enter address</string>
     <string name="search_offer">Search for offer</string>
+    <string name="selected_address">Selected address</string>
+    <string name="set_location">Set location</string>
+    <string name="location">Location</string>
+    <string name="create">Create</string>
+    <string name="first_name">First name</string>
+    <string name="last_name">Last name</string>
+    <string name="nothing_here">There\'s nothing here…</string>
+    <string name="cost">Cost</string>
+    <string name="offer_added">Your offer has been added!</string>
+    <string name="active_offers">Active offers</string>
+    <string name="finished_offers">Finished offers</string>
+    <string name="hi">Hi</string>
 </resources>

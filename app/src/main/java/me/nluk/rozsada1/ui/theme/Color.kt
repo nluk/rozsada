@@ -16,6 +16,11 @@ val secondaryDarkColor  = Color(0xff8c9900)
 val primaryTextColor  = Color(0xffffffff)
 val secondaryTextColor  = Color(0xFF000000)
 
+val darkGrey = Color(0xFF444444)
 val grey = Color(0xFFB9B9B9)
 val lightGrey = Color(0xFFD5D5D5)
 val veryLightGray = Color(0xFFf7f7f7)
+
+val lightRed = Color(0xFFFF8B8B)
+
+val transparentGreen = Color(0x613BAA00)

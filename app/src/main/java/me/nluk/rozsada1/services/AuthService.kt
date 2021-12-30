@@ -10,7 +10,7 @@ interface AuthService {
     fun authUserFlow() : StateFlow<FirebaseUser?>
     fun isAuthenticated() : Boolean
     suspend fun login(username : String, password : String) : AuthError?
-    suspend fun signUp(username : String, password : String) : AuthError?
+    suspend fun signUp(username : String, password : String, firstName : String, lastName : String) : AuthError?
     suspend fun logout()
     suspend fun <T> callAuthenticated(f : suspend (userId : String)-> T?) : T?
     suspend fun runAuthenticated(f : suspend (userId : String)-> Unit)

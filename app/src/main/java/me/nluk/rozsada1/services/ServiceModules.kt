@@ -11,12 +11,8 @@ import dev.gitlive.firebase.auth.FirebaseAuth
 import dev.gitlive.firebase.auth.auth
 import dev.gitlive.firebase.firestore.FirebaseFirestore
 import dev.gitlive.firebase.firestore.firestore
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import me.nluk.rozsada1.services.impl.*
-import okhttp3.MediaType
 import okhttp3.MediaType.Companion.toMediaType
 import retrofit2.Retrofit
 
@@ -54,7 +50,7 @@ object SearchApiServiceModule{
 object ImageUploadServiceModule{
     @Provides
     fun provideImageUploadService() = retrofit("https://t36df3t5cl.execute-api.eu-central-1.amazonaws.com/rozsada-dev/")
-        .create(ImageUploadService::class.java)
+        .create(ImagesAPI::class.java)
 }
 
 @Module
@@ -91,6 +87,14 @@ abstract class SearchServiceModule{
     @Binds
     abstract fun bindSearchService(searchService: SearchServiceImpl): SearchService
 }
+
+@Module
+@InstallIn(ViewModelComponent::class)
+abstract class ImageServiceModule{
+    @Binds
+    abstract fun bindImageService(imageService: ImageServiceImpl): ImageService
+}
+
 
 private fun retrofit(baseUrl : String) = Retrofit.Builder()
     .baseUrl(baseUrl)
